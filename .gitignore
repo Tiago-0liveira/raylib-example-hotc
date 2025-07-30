@@ -1,0 +1,4 @@
+__shared_libs/
+bin
+.vscode
+libs/
