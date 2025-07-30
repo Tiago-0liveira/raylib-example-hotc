@@ -9,24 +9,27 @@ LIBS_DIR = libs
 REPO_URL = https://github.com/Tiago-0liveira/hotc.git
 HOTC_DIR = $(LIBS_DIR)/hotc
 
-RAYLIB_URL = https://github.com/raysan5/raylib/releases/download/5.5/raylib-5.5_win64_mingw-w64.zip
-RAYLIB_DIR = $(LIBS_DIR)/raylib-5.5_win64_mingw-w64
-RAYLIB_ZIP = $(RAYLIB_DIR).zip
-
-
 ifeq ($(OS),Windows_NT)
-	LIB_EXT = .lib
 	EXE = .exe
+	PLATFORM_SPEC_FLAGS = -lwinmm -lgdi32 -lopengl32
+	RAYLIB_URL = https://github.com/raysan5/raylib/releases/download/5.5/raylib-5.5_win64_mingw-w64.zip
+	RAYLIB_DIR = $(LIBS_DIR)\raylib-5.5_win64_mingw-w64
+	RAYLIB_DYNAMIC_LIB = raylib.dll
 else
-	LIB_EXT = .a
 	EXE =
+	PLATFORM_SPEC_FLAGS = -ldl -Wl,-rpath=./bin
+	RAYLIB_URL = https://github.com/raysan5/raylib/releases/download/5.5/raylib-5.5_linux_amd64.tar.gz
+	RAYLIB_DIR = $(LIBS_DIR)/raylib-5.5_linux_amd64
+	RAYLIB_TAR = raylib5-5.tar
+	RAYLIB_DYNAMIC_LIB = libraylib.so
 endif
+
+RAYLIB_ZIP = $(RAYLIB_DIR).zip
 
 INCLUDES = -I includes/ -I $(HOTC_DIR)/includes/ -I $(RAYLIB_DIR)/include/
 BIN_DIR = bin
-EXAMPLES_DIR = examples/
 EXECUTABLE = $(BIN_DIR)/$(NAME)$(EXE)
-LINK_FLAGS = -L$(HOTC_DIR)/bin -lhotc -L$(BIN_DIR)/ -lraylib -lwinmm -lgdi32 -lopengl32
+LINK_FLAGS = -L$(HOTC_DIR)/bin -lhotc -L$(BIN_DIR)/ -lraylib $(PLATFORM_SPEC_FLAGS)
 
 SOURCES = $(wildcard $(SRC_FOLDER)*.c)
 OBJS = $(patsubst $(SRC_FOLDER)%.c, $(BIN_DIR)/%.o, $(SOURCES))
@@ -34,13 +37,17 @@ OBJS = $(patsubst $(SRC_FOLDER)%.c, $(BIN_DIR)/%.o, $(SOURCES))
 all: setup_hotc raylib_setup $(EXECUTABLE)
 
 run: all
-	@$(EXECUTABLE)
-
-copy_raylib_dll: $(BIN_DIR)/raylib.dll
-
-$(BIN_DIR)/raylib.dll: 
 ifeq ($(OS),Windows_NT)
-	@if not exist ".\bin\raylib.dll" (copy /Y libs\raylib-5.5_win64_mingw-w64\lib\raylib.dll bin)
+	@$(EXECUTABLE)
+else
+	@LIBGL_ALWAYS_SOFTWARE=1 $(EXECUTABLE)
+endif
+
+copy_raylib_dll:
+ifeq ($(OS),Windows_NT)
+	@if not exist ".\bin\$(RAYLIB_DYNAMIC_LIB)" (copy /Y $(RAYLIB_DIR)\lib\$(RAYLIB_DYNAMIC_LIB) bin)
+else
+	@cp -f $(RAYLIB_DIR)/lib/$(RAYLIB_DYNAMIC_LIB).5.5.0 $(BIN_DIR)/$(RAYLIB_DYNAMIC_LIB).550
 endif
 
 create_bin_dir:
@@ -59,7 +66,7 @@ ifeq ($(OS),Windows_NT)
 else
 	@mkdir -p $(BIN_DIR)
 endif
-	$(CC) $(CFLAGS) $(OBJS) $(LINK_FLAGS) -o $(EXECUTABLE)
+	@$(CC) $(CFLAGS) $(OBJS) $(LINK_FLAGS) -o $(EXECUTABLE)
 	@echo "✅ Built $(EXECUTABLE)"
 
 setup_hotc:
@@ -92,7 +99,14 @@ ifeq ($(OS),Windows_NT)
 		echo Raylib already exists. Skipping download. \
 	)
 else
-	@echo "❌ raylib_setup only implemented for Windows_NT (MinGW)"
+	@if [ ! -d "$(RAYLIB_DIR)" ]; then \
+		echo "Downloading raylib..."; \
+		curl -L -o $(RAYLIB_TAR) $(RAYLIB_URL); \
+		tar -xf $(RAYLIB_TAR) -C $(LIBS_DIR); \
+		rm -f $(RAYLIB_TAR); \
+	else \
+		echo "Raylib already exists. Skipping download."; \
+	fi
 endif
 
 

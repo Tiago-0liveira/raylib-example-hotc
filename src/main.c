@@ -22,14 +22,21 @@ LAMBDA(styles, {
 LAMBDA(before_check, { draw_hotc_update_frame(lib_info, BEFORE_CHECK); })
 LAMBDA(before_rebuild, { draw_hotc_update_frame(lib_info, BEFORE_REBUILD); })
 LAMBDA(after_rebuild, { draw_hotc_update_frame(lib_info, BEFORE_REBUILD); })
-LAMBDA(on_error, { draw_hotc_update_frame(lib_info, ON_ERROR); })
+LAMBDA(on_error, { 
+	draw_hotc_update_frame(lib_info, ON_ERROR);
+	draw_sidebar = NULL;
+})
 
 update_lib_event_handlers update_handlers = { LAMBDA_before_check, LAMBDA_before_rebuild, LAMBDA_after_rebuild, LAMBDA_on_error };
 
 int main(void)
 {
 	HOTC_SET_PATH("./libs/hotc/");
-	register_shared_library("./src/shared/styles.c", HOTC_ON_LOAD(LAMBDA_styles), "-I ./libs/raylib-5.5_win64_mingw-w64/include -I ./includes -L./bin -lraylib -lwinmm -lgdi32 -lopengl32");
+	#ifdef _WIN32
+		register_shared_library("./src/shared/styles.c", HOTC_ON_LOAD(LAMBDA_styles), "-I ./libs/raylib-5.5_win64_mingw-w64/include -I ./includes -L./bin -lraylib -lwinmm -lgdi32 -lopengl32");
+	#else
+		register_shared_library("./src/shared/styles.c", HOTC_ON_LOAD(LAMBDA_styles), "-I ./libs/raylib-5.5_linux_amd64/include -I ./includes -L./bin -lraylib");
+	#endif
 
 	InitWindow(800, 600, "raylib [core] example - basic window");
 	SetTargetFPS(60);
